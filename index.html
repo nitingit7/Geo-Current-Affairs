@@ -92,21 +92,24 @@
         // ==========================================
         const API_KEY = 'd30822e794784070fc8da8c3d358162e'; 
 
-        // 2. FETCH NEWS FUNCTION (Updated with Proxy)
+        // 2. FETCH NEWS FUNCTION (Final Proxy Fix)
         async function fetchNews(countryName) {
             const newsContent = document.getElementById('news-content');
             newsContent.innerHTML = `<div class="loading">Fetching latest news for <strong>${countryName}</strong>...<br><br>⏳</div>`;
 
             try {
-                // The actual GNews API URL
-                const targetUrl = `https://gnews.io/api/v4/search?q="${countryName}"&lang=en&max=10&apikey=${API_KEY}`;
+                // Encode the country name to handle spaces safely (e.g., "United States")
+                const safeCountryName = encodeURIComponent(countryName);
+                const targetUrl = `https://gnews.io/api/v4/search?q="${safeCountryName}"&lang=en&max=10&apikey=${API_KEY}`;
                 
-                // Wrap the URL in a free public proxy to bypass CORS/Free-tier restrictions
-                const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(targetUrl)}`;
+                // Use '/get' instead of '/raw' so the proxy forces CORS approval
+                const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(targetUrl)}`;
 
-                // Fetch through the proxy
                 const response = await fetch(proxyUrl);
-                const data = await response.json();
+                const proxyData = await response.json();
+                
+                // Unpack the JSON string from the proxy's 'contents' property
+                const data = JSON.parse(proxyData.contents);
 
                 // Handle API Errors
                 if (data.errors) {
@@ -132,8 +135,8 @@
                     newsContent.innerHTML = `<h2>News: ${countryName}</h2><p>No recent news found for this region in English.</p>`;
                 }
             } catch (error) {
-                console.error(error); 
-                newsContent.innerHTML = `<p style="color:red;">Failed to fetch news. Please check your internet connection.</p>`;
+                console.error("Fetch error details:", error); 
+                newsContent.innerHTML = `<p style="color:red;">Failed to fetch news. Check the console for details.</p>`;
             }
         }
 
@@ -166,8 +169,7 @@
 
                         // Click event: Zoom in and fetch news
                         layer.on('click', function (e) {
-                            // FIXED: Changed from feature.properties.ADMIN to feature.properties.name
-                            const countryName = feature.properties.name; 
+                            const countryName = feature.properties.name; // Gets the correct country name
                             map.flyToBounds(e.target.getBounds(), { padding: [50, 50], duration: 1.5 }); // Smooth zoom
                             fetchNews(countryName); // Trigger the news search
                         });
