@@ -88,23 +88,29 @@
         }).addTo(map);
 
         // ==========================================
-        // ADD YOUR GNEWS API KEY HERE
+        // GNEWS API KEY
         // ==========================================
         const API_KEY = 'd30822e794784070fc8da8c3d358162e'; 
 
-        // 2. FETCH NEWS FUNCTION
+        // 2. FETCH NEWS FUNCTION (Updated with Proxy)
         async function fetchNews(countryName) {
             const newsContent = document.getElementById('news-content');
             newsContent.innerHTML = `<div class="loading">Fetching latest news for <strong>${countryName}</strong>...<br><br>⏳</div>`;
 
             try {
-                // Search for the country name in the news API, returning top 10 english articles
-                const response = await fetch(`https://gnews.io/api/v4/search?q="${countryName}"&lang=en&max=10&apikey=${API_KEY}`);
+                // The actual GNews API URL
+                const targetUrl = `https://gnews.io/api/v4/search?q="${countryName}"&lang=en&max=10&apikey=${API_KEY}`;
+                
+                // Wrap the URL in a free public proxy to bypass CORS/Free-tier restrictions
+                const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(targetUrl)}`;
+
+                // Fetch through the proxy
+                const response = await fetch(proxyUrl);
                 const data = await response.json();
 
-                // Handle API Errors (like missing or invalid API Key)
+                // Handle API Errors
                 if (data.errors) {
-                    newsContent.innerHTML = `<p style="color:red;"><strong>API Error:</strong> ${data.errors[0]}</p><p>Did you remember to insert your API key in the code?</p>`;
+                    newsContent.innerHTML = `<p style="color:red;"><strong>API Error:</strong> ${data.errors[0]}</p>`;
                     return;
                 }
 
@@ -126,12 +132,12 @@
                     newsContent.innerHTML = `<h2>News: ${countryName}</h2><p>No recent news found for this region in English.</p>`;
                 }
             } catch (error) {
-                newsContent.innerHTML = `<p style="color:red;">Failed to fetch news. Please check your internet connection and verify your API key.</p>`;
+                console.error(error); 
+                newsContent.innerHTML = `<p style="color:red;">Failed to fetch news. Please check your internet connection.</p>`;
             }
         }
 
         // 3. LOAD INTERACTIVE COUNTRY BORDERS
-        // We use a free, public GeoJSON dataset containing country shapes
         fetch('https://raw.githubusercontent.com/datasets/geo-countries/master/data/countries.geojson')
             .then(response => response.json())
             .then(data => {
@@ -160,7 +166,8 @@
 
                         // Click event: Zoom in and fetch news
                         layer.on('click', function (e) {
-                            const countryName = feature.properties.name; // Gets the country name
+                            // FIXED: Changed from feature.properties.ADMIN to feature.properties.name
+                            const countryName = feature.properties.name; 
                             map.flyToBounds(e.target.getBounds(), { padding: [50, 50], duration: 1.5 }); // Smooth zoom
                             fetchNews(countryName); // Trigger the news search
                         });
@@ -171,5 +178,4 @@
 
     </script>
 </body>
-          </html>
-          
+</html>
